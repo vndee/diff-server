@@ -8,7 +8,9 @@ CREATE TABLE IF NOT EXISTS public.query_meta
     prompt character varying COLLATE pg_catalog."default" NOT NULL,
     translated_prompt character varying COLLATE pg_catalog."default",
     language character varying COLLATE pg_catalog."default" NOT NULL,
-    is_generated boolean NOT NULL
+    is_generated boolean NOT NULL,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone
 )
 
 TABLESPACE pg_default;
