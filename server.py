@@ -3,6 +3,7 @@ import uuid
 import json
 import argparse
 import uvicorn
+import sqlalchemy as db
 from loguru import logger
 from kafka import KafkaProducer
 from omegaconf import OmegaConf
@@ -23,9 +24,20 @@ class ImageDiffusionServer(object):
 
     conf, kafka_producer = None, None
 
+    pg_engine, pg_connection, pg_query_meta_table = None, None, None
+
     def __init__(self, conf):
         super(ImageDiffusionServer, self).__init__()
         ImageDiffusionServer.conf = OmegaConf.load(conf)
+        connection_string = f"postgresql://{ImageDiffusionServer.conf.postgres.user}:" \
+                            f"{ImageDiffusionServer.conf.postgres.password}@" \
+                            f"{ImageDiffusionServer.conf.postgres.host}/{ImageDiffusionServer.conf.postgres.database}"
+        ImageDiffusionServer.pg_engine = db.create_engine(connection_string)
+        ImageDiffusionServer.pg_connection = ImageDiffusionServer.pg_engine.connect()
+        ImageDiffusionServer.pg_query_meta_table = db.Table(ImageDiffusionServer.conf.postgres.query_meta_table,
+                                                            db.MetaData(),
+                                                            autoload=True,
+                                                            autoload_with=ImageDiffusionServer.pg_engine)
 
     @staticmethod
     @server.on_event("startup")
@@ -76,9 +88,24 @@ class ImageDiffusionServer(object):
         except Exception as ex:
             logger.exception(ex)
             return {
-                "message": "Internal Server Error",
-                "data": request_id
-            }, status.HTTP_500_INTERNAL_SERVER_ERROR
+                       "message": "Internal Server Error",
+                       "data": request_id
+                   }, status.HTTP_500_INTERNAL_SERVER_ERROR
+
+        try:
+            query = db.insert(ImageDiffusionServer.pg_query_meta_table).values(query_id=request_id,
+                                                                               prompt=prompt,
+                                                                               translated_prompt=None,
+                                                                               language=lang,
+                                                                               is_generated=False)
+            _ = ImageDiffusionServer.pg_connection.execute(query)
+            logger.info(f"Write transaction {request_id} to table {ImageDiffusionServer.conf.postgres.query_meta_table}")
+        except Exception as ex:
+            logger.exception(ex)
+            return {
+                       "message": "Internal Server Error",
+                       "data": request_id
+                   }, status.HTTP_500_INTERNAL_SERVER_ERROR
 
         return {
                    "message": "We are processing your request",

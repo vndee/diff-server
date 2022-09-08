@@ -4,6 +4,13 @@ kafka:
   image_generation_topic: IMAGE_GENERATION_TOPIC
   text_translation_topic: TEXT_TRANSLATION_TOPIC
 
+postgres:
+  host: localhost
+  database: diff-server
+  user: postgres
+  password: changeme
+  query_meta_table: query_meta
+
 server:
   host: 0.0.0.0
   port: 5000

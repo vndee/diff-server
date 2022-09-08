@@ -1,6 +1,8 @@
 import os
 import json
 import argparse
+import sqlalchemy as db
+from PIL import Image
 from loguru import logger
 from torch import autocast
 from omegaconf import OmegaConf
@@ -13,8 +15,8 @@ class ImageGenerationConsumerWorker(object):
         super(ImageGenerationConsumerWorker, self).__init__()
         self.conf = OmegaConf.load(conf)
 
-        self.pipe = StableDiffusionPipeline.from_pretrained(self.conf.imagen.checkpoint)
-        self.pipe.to(self.conf.imagen.device)
+        # self.pipe = StableDiffusionPipeline.from_pretrained(self.conf.imagen.checkpoint)
+        # self.pipe.to(self.conf.imagen.device)
 
         self.topic = self.conf.kafka.image_generation_topic
         self.kafka_consumer = KafkaConsumer(self.topic,
@@ -22,6 +24,16 @@ class ImageGenerationConsumerWorker(object):
                                             value_deserializer=lambda x: json.loads(x.decode('utf-8')),
                                             group_id=self.conf.kafka.group_id,
                                             auto_offset_reset="earliest")
+
+        connection_string = f"postgresql://{self.conf.postgres.user}:" \
+                            f"{self.conf.postgres.password}@" \
+                            f"{self.conf.postgres.host}/{self.conf.postgres.database}"
+        self.pg_engine = db.create_engine(connection_string)
+        self.pg_connection = self.pg_engine.connect()
+        self.pg_query_meta_table = db.Table(self.conf.postgres.query_meta_table,
+                                            db.MetaData(),
+                                            autoload=True,
+                                            autoload_with=self.pg_engine)
 
         logger.info(self.kafka_consumer.config)
         logger.info(f"ImageGenerationConsumerWorker is live now!!!")
@@ -31,9 +43,14 @@ class ImageGenerationConsumerWorker(object):
         with autocast("cuda"):
             # TODO: edit in production
             f_name = os.path.join(self.conf.file_server.folder, f"{id}.jpg")
-            image = self.pipe(prompt, guidance_scale=7.5)["sample"][0]
-
+            # image = self.pipe(prompt, guidance_scale=7.5)["sample"][0]
+            image = Image.open("static/images/142930455299943375512167784007445374487.jpg")
             image.save(f_name)
+
+            query = db.update(self.pg_query_meta_table).values(is_generated=True).where(
+                self.pg_query_meta_table.columns.query_id == str(id))
+            _ = self.pg_connection.execute(query)
+
             logger.info(f"Output saved at {f_name}")
 
     def execute(self):
