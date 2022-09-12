@@ -5,7 +5,7 @@ kafka:
   text_translation_topic: TEXT_TRANSLATION_TOPIC
 
 postgres:
-  host: localhost
+  host: localhost:5432
   database: diff-server
   user: postgres
   password: changeme

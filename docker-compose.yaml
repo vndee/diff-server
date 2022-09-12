@@ -36,18 +36,6 @@ services:
           - kafka
     restart: always
 
-  service_server:
-    build:
-      context: .
-      dockerfile: ./docker/server.Dockerfile
-    ports:
-      - "7000:5000"
-    volumes:
-      - ${PWD}:/app/
-    command: ["python", "server.py"]
-    networks:
-      - stream-network
-
   webserver:
     image: nginx:latest
     ports:
@@ -86,6 +74,36 @@ services:
     networks:
       - stream-network
     restart: unless-stopped
+
+  service_server:
+    build:
+      context: .
+      dockerfile: ./docker/server.Dockerfile
+    depends_on:
+      - postgres
+      - kafka
+    ports:
+      - "7000:5000"
+    volumes:
+      - ${PWD}:/app/
+    command: ["python", "server.py"]
+    networks:
+      - stream-network
+
+  translator_worker:
+    build:
+      context: .
+      dockerfile: ./docker/translator.Dockerfile
+    runtime: nvidia
+    depends_on:
+      - kafka
+    environment:
+      - NVIDIA_DISABLE_REQUIRE=1
+    volumes:
+      - ${PWD}:/app/
+    command: ["python3", "translator.py"]
+    networks:
+      - stream-network
 
 networks:
   stream-network:

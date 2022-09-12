@@ -42,6 +42,7 @@ class ImageDiffusionServer(object):
     @staticmethod
     @server.on_event("startup")
     async def startup_event():
+        logger.info(ImageDiffusionServer.conf.kafka)
         ImageDiffusionServer.kafka_producer = KafkaProducer(
             bootstrap_servers=ImageDiffusionServer.conf.kafka.bootstrap_servers,
             value_serializer=lambda x: json.dumps(

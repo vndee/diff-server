@@ -44,7 +44,7 @@ class ImageGenerationConsumerWorker(object):
             # TODO: edit in production
             f_name = os.path.join(self.conf.file_server.folder, f"{id}.jpg")
             # image = self.pipe(prompt, guidance_scale=7.5)["sample"][0]
-            image = Image.open("static/images/142930455299943375512167784007445374487.jpg")
+            image = Image.open("static/images/10342726256722825098371792010908027558.jpg")
             image.save(f_name)
 
             query = db.update(self.pg_query_meta_table).values(is_generated=True).where(

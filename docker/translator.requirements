@@ -1,0 +1,5 @@
+kafka-python==2.0.2
+loguru==0.6.0
+omegaconf==2.2.3
+transformers
+sentencepiece
