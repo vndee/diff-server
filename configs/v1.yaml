@@ -1,11 +1,11 @@
 kafka:
-  bootstrap_servers: localhost:9094
+  bootstrap_servers: kafka:9094
   group_id: DEFAULT_KAFKA_GROUP_ID
   image_generation_topic: IMAGE_GENERATION_TOPIC
   text_translation_topic: TEXT_TRANSLATION_TOPIC
 
 postgres:
-  host: localhost:5432
+  host: postgres:5432
   database: diff-server
   user: postgres
   password: changeme
@@ -16,11 +16,11 @@ server:
   port: 5000
 
 imagen:
-  device: cpu
-  checkpoint: checkpoints/fp16
+  device: cuda:0
+  checkpoint: ./checkpoints/fp32
 
 translator:
-  device: cpu
+  device: cuda:0
   checkpoint: checkpoints/translator
 
 file_server:

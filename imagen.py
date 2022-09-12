@@ -1,10 +1,11 @@
 import os
 import json
+import torch
 import argparse
 import sqlalchemy as db
 from PIL import Image
 from loguru import logger
-from torch import autocast
+# from torch import autocast
 from omegaconf import OmegaConf
 from diffusers import StableDiffusionPipeline
 from kafka import KafkaConsumer
@@ -15,8 +16,8 @@ class ImageGenerationConsumerWorker(object):
         super(ImageGenerationConsumerWorker, self).__init__()
         self.conf = OmegaConf.load(conf)
 
-        # self.pipe = StableDiffusionPipeline.from_pretrained(self.conf.imagen.checkpoint)
-        # self.pipe.to(self.conf.imagen.device)
+        self.pipe = StableDiffusionPipeline.from_pretrained(self.conf.imagen.checkpoint)
+        self.pipe = self.pipe.to(self.conf.imagen.device)
 
         self.topic = self.conf.kafka.image_generation_topic
         self.kafka_consumer = KafkaConsumer(self.topic,
@@ -40,11 +41,11 @@ class ImageGenerationConsumerWorker(object):
 
     def synthesize(self, id, prompt):
         logger.info(f"Synthesizing for {id}")
-        with autocast("cuda"):
+        with torch.no_grad():
             # TODO: edit in production
             f_name = os.path.join(self.conf.file_server.folder, f"{id}.jpg")
-            # image = self.pipe(prompt, guidance_scale=7.5)["sample"][0]
-            image = Image.open("static/images/10342726256722825098371792010908027558.jpg")
+            image = self.pipe(prompt, guidance_scale=7.5)["sample"][0]
+            # image = Image.open("static/images/10342726256722825098371792010908027558.jpg")
             image.save(f_name)
 
             query = db.update(self.pg_query_meta_table).values(is_generated=True).where(

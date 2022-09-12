@@ -1,8 +1,9 @@
 import os
 import json
+import torch
 import argparse
 from loguru import logger
-from torch import autocast
+# from torch import autocast
 from omegaconf import OmegaConf
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from kafka import KafkaConsumer, KafkaProducer
@@ -34,9 +35,9 @@ class TextTranslationConsumerWorker(object):
         logger.info(f"TextTranslationConsumerWorker is live now!!!")
 
     def translate(self, prompt):
-        with autocast(self.conf.imagen.device):
+        with torch.no_grad():
             input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids
-
+    
             output_ids = self.model.generate(
                 input_ids.to(self.conf.translator.device),
                 do_sample=True,

@@ -1,7 +1,11 @@
 setuptools_rust
 kafka-python==2.0.2
+protobuf
+psycopg2
 loguru==0.6.0
 omegaconf==2.2.3
-transformers
 sentencepiece
+transformers
+diffusers>=0.3.0
 SQLAlchemy
+Pillow
