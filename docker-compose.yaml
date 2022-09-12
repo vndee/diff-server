@@ -105,6 +105,21 @@ services:
     networks:
       - stream-network
 
+  imagen_worker:
+    build:
+      context: .
+      dockerfile: ./docker/imagen.Dockerfile
+    runtime: nvidia
+    depends_on:
+      - kafka
+    environment:
+      - NVIDIA_DISABLE_REQUIRE=1
+    volumes:
+      - ${PWD}:/app/
+    command: ["python3", "imagen.py"]
+    networks:
+      - stream-network
+
 networks:
   stream-network:
     external: true
