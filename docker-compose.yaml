@@ -1,0 +1,127 @@
+version: "3.3"
+
+services:
+  kafka:
+    image: 'bitnami/kafka:latest'
+    ports:
+      - '9092:9092'
+    environment:
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@127.0.0.1:9093
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    networks:
+      stream-network:
+        aliases:
+          - kafka
+  webserver:
+    image: nginx:latest
+    ports:
+      - "8001:8001"
+    restart: always
+    volumes:
+      - ./configs/nginx/:/etc/nginx/conf.d/:ro
+      - ${PWD}/static/images/:/www/data/images/
+    networks:
+      stream-network:
+        aliases:
+          - nginx
+    restart: on-failure
+
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      PGDATA: /data/postgres
+      POSTGRES_DB: diff-server
+    volumes:
+      - ./static/databases/postgres:/data/postgres
+    ports:
+      - "5432:5432"
+    networks:
+      stream-network:
+        aliases:
+          - postgres
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.org}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - ./static/databases/pgadmin:/var/lib/pgadmin
+    ports:
+      - "${PGADMIN_PORT:-8002}:80"
+    networks:
+      - stream-network
+    restart: unless-stopped
+
+  service_server:
+    build:
+      context: .
+      dockerfile: ./docker/server.Dockerfile
+    depends_on:
+      - postgres
+      - kafka
+      - translator_worker
+      - imagen_worker
+    ports:
+      - "8000:5000"
+    volumes:
+      - ${PWD}:/app/
+    command: ["python", "server.py"]
+    networks:
+      - stream-network
+    restart: on-failure
+
+  translator_worker:
+    build:
+      context: .
+      dockerfile: ./docker/translator.Dockerfile
+    depends_on:
+      - kafka
+    volumes:
+      - ${PWD}:/app/
+    command: ["python3", "translator.py"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["0"]
+              capabilities: [gpu]
+    networks:
+      - stream-network
+    restart: on-failure
+
+  imagen_worker:
+    build:
+      context: .
+      dockerfile: ./docker/imagen.Dockerfile
+    depends_on:
+      - kafka
+    volumes:
+      - ${PWD}:/app/
+    command: ["python3", "imagen.py"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["0"]
+              capabilities: [gpu]
+    networks:
+      - stream-network
+    restart: on-failure
+
+networks:
+  stream-network:
+    driver: bridge
