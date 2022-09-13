@@ -23,14 +23,12 @@ class TextTranslationConsumerWorker(object):
                                             bootstrap_servers=self.conf.kafka.bootstrap_servers,
                                             value_deserializer=lambda x: json.loads(x.decode('utf-8')),
                                             group_id=self.conf.kafka.group_id,
-                                            auto_offset_reset="earliest",
-                                            api_version=(2, 8, 1))
+                                            auto_offset_reset="earliest")
 
         self.kafka_producer = KafkaProducer(bootstrap_servers=self.conf.kafka.bootstrap_servers,
                                             value_serializer=lambda x: json.dumps(
                                                 x, indent=4, sort_keys=True, default=str, ensure_ascii=False
-                                            ).encode('utf-8'),
-                                            api_version=(2, 8, 1))
+                                            ).encode('utf-8'))
 
         self.imagen_topic = self.conf.kafka.image_generation_topic
         logger.info(self.kafka_consumer.config)

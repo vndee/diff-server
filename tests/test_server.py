@@ -1,6 +1,6 @@
 import requests
 
-url = "http://localhost:5000/text_to_image/?prompt=tôi thấy hoa vàng trên cỏ xanh&lang=vi"
+url = "http://localhost:80/text_to_image/?prompt=tôi thấy hoa vàng trên cỏ xanh&lang=vi"
 
 payload={}
 headers = {}

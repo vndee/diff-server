@@ -46,8 +46,7 @@ class ImageDiffusionServer(object):
             bootstrap_servers=ImageDiffusionServer.conf.kafka.bootstrap_servers,
             value_serializer=lambda x: json.dumps(
                 x, indent=4, sort_keys=True, default=str, ensure_ascii=False
-            ).encode('utf-8'),
-            api_version=(2, 8, 1))
+            ).encode('utf-8'))
 
         logger.info(ImageDiffusionServer.kafka_producer.config)
         logger.info("Service server live now!!!")
