@@ -1,11 +1,11 @@
 kafka:
-  bootstrap_servers: kafka:9092
+  bootstrap_servers: localhost:9092
   group_id: DEFAULT_KAFKA_GROUP_ID
   image_generation_topic: IMAGE_GENERATION_TOPIC
   text_translation_topic: TEXT_TRANSLATION_TOPIC
 
 postgres:
-  host: postgres:5432
+  host: localhost:5432
   database: diff-server
   user: postgres
   password: changeme

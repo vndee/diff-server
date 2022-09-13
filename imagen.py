@@ -24,7 +24,8 @@ class ImageGenerationConsumerWorker(object):
                                             bootstrap_servers=self.conf.kafka.bootstrap_servers,
                                             value_deserializer=lambda x: json.loads(x.decode('utf-8')),
                                             group_id=self.conf.kafka.group_id,
-                                            auto_offset_reset="earliest")
+                                            auto_offset_reset="earliest",
+                                            api_version=(2, 8, 1))
 
         connection_string = f"postgresql://{self.conf.postgres.user}:" \
                             f"{self.conf.postgres.password}@" \
