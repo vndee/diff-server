@@ -20,9 +20,11 @@ if __name__ == "__main__":
 
     table = db.Table("query_meta",
                      meta,
+                     db.Column("user_id", db.String, nullable=False),
                      db.Column("query_id", db.String, nullable=False),
                      db.Column("prompt", db.String, nullable=False),
                      db.Column("translated_prompt", db.String, nullable=True),
+                     db.Column("is_init_image", db.Boolean, nullable=False),
                      db.Column("language", db.String, nullable=False),
                      db.Column("is_generated", db.Boolean, nullable=False, default=False),
                      db.Column("created_at", db.DateTime(timezone=True), default=func.now()),

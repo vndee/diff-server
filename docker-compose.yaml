@@ -43,7 +43,7 @@ services:
     volumes:
       - ./static/databases/postgres:/data/postgres
     ports:
-      - "5432:5432"
+      - "8003:5432"
     networks:
       stream-network:
         aliases:

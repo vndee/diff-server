@@ -3,8 +3,9 @@ import io
 import uuid
 import json
 import redis
-import argparse
 import uvicorn
+import datetime
+import argparse
 import sqlalchemy as db
 from loguru import logger
 from kafka import KafkaProducer
@@ -69,7 +70,7 @@ class ImageDiffusionServer(object):
 
     @staticmethod
     @server.get("/text_to_image/", status_code=status.HTTP_201_CREATED)
-    async def text_to_image(prompt: str, lang: str):
+    async def text_to_image(user_id: str, prompt: str, lang: str):
         prompt = prompt.strip()
         if prompt == "":
             return {
@@ -101,11 +102,14 @@ class ImageDiffusionServer(object):
                    }, status.HTTP_500_INTERNAL_SERVER_ERROR
 
         try:
-            query = db.insert(ImageDiffusionServer.pg_query_meta_table).values(query_id=request_id,
+            query = db.insert(ImageDiffusionServer.pg_query_meta_table).values(user_id=user_id,
+                                                                               is_init_image=False,
+                                                                               query_id=request_id,
                                                                                prompt=prompt,
                                                                                translated_prompt=None,
                                                                                language=lang,
-                                                                               is_generated=False)
+                                                                               is_generated=False,
+                                                                               created_at=datetime.datetime.now())
             _ = ImageDiffusionServer.pg_connection.execute(query)
             logger.info(f"Write transaction {request_id} to table {ImageDiffusionServer.conf.postgres.query_meta_table}")
         except Exception as ex:
@@ -157,11 +161,14 @@ class ImageDiffusionServer(object):
                    }, status.HTTP_500_INTERNAL_SERVER_ERROR
 
         try:
-            query = db.insert(ImageDiffusionServer.pg_query_meta_table).values(query_id=request_id,
+            query = db.insert(ImageDiffusionServer.pg_query_meta_table).values(user_id=user_id,
+                                                                               is_init_image=True,
+                                                                               query_id=request_id,
                                                                                prompt=prompt,
                                                                                translated_prompt=None,
                                                                                language=lang,
-                                                                               is_generated=False)
+                                                                               is_generated=False,
+                                                                               createa_at=datetime.datetime.now())
             _ = ImageDiffusionServer.pg_connection.execute(query)
             logger.info(f"Write transaction {request_id} to table {ImageDiffusionServer.conf.postgres.query_meta_table}")
         except Exception as ex:

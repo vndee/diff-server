@@ -4,6 +4,7 @@ import io
 import json
 import redis
 import torch
+import datetime
 import argparse
 from PIL import Image
 import sqlalchemy as db
@@ -63,7 +64,10 @@ class ImageGenerationConsumerWorker(object):
             # image = Image.open("static/images/10342726256722825098371792010908027558.jpg")
             image.save(f_name)
 
-            query = db.update(self.pg_query_meta_table).values(is_generated=True).where(
+            query = db.update(self.pg_query_meta_table).values(
+                    is_generated=True, 
+                    translated_prompt=prompt,
+                    updated_at=datetime.datetime.now()).where(
                 self.pg_query_meta_table.columns.query_id == str(id))
             _ = self.pg_connection.execute(query)
 
