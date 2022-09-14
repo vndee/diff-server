@@ -50,6 +50,21 @@ services:
           - postgres
     restart: unless-stopped
 
+  redis:
+    image: bitnami/redis:latest
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_PORT_NUMBER=6379
+    ports:
+      - "6379:6379"
+    networks:
+      stream-network:
+        aliases:
+          - stream-network
+    volumes:
+      - ${PWD}/static/database/redis:/bitnami
+    restart: on-failure
+
   pgadmin:
     image: dpage/pgadmin4
     environment:
@@ -80,7 +95,7 @@ services:
     command: ["python", "server.py"]
     networks:
       - stream-network
-    restart: on-failure
+    restart: always
 
   translator_worker:
     build:
@@ -92,6 +107,8 @@ services:
       - ${PWD}:/app/
     command: ["python3", "translator.py"]
     deploy:
+      mode: replicated
+      replicas: 2
       resources:
         reservations:
           devices:
@@ -112,6 +129,8 @@ services:
       - ${PWD}:/app/
     command: ["python3", "imagen.py"]
     deploy:
+      mode: replicated
+      replicas: 3
       resources:
         reservations:
           devices:

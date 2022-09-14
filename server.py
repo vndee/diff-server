@@ -1,13 +1,15 @@
 import os
+import io
 import uuid
 import json
+import redis
 import argparse
 import uvicorn
 import sqlalchemy as db
 from loguru import logger
 from kafka import KafkaProducer
 from omegaconf import OmegaConf
-from fastapi import FastAPI, Request, status, HTTPException
+from fastapi import FastAPI, File, Form, Request, status, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -25,6 +27,7 @@ class ImageDiffusionServer(object):
     conf, kafka_producer = None, None
 
     pg_engine, pg_connection, pg_query_meta_table = None, None, None
+    rd_connection = None
 
     def __init__(self, conf):
         super(ImageDiffusionServer, self).__init__()
@@ -38,6 +41,10 @@ class ImageDiffusionServer(object):
                                                             db.MetaData(),
                                                             autoload=True,
                                                             autoload_with=ImageDiffusionServer.pg_engine)
+
+        ImageDiffusionServer.rd_connection = redis.Redis(host=ImageDiffusionServer.conf.redis.host,
+                port=ImageDiffusionServer.conf.redis.port,
+                db=ImageDiffusionServer.conf.redis.database)
 
     @staticmethod
     @server.on_event("startup")
@@ -80,6 +87,62 @@ class ImageDiffusionServer(object):
             topic = ImageDiffusionServer.conf.kafka.text_translation_topic
 
         try:
+            ImageDiffusionServer.kafka_producer.send(topic,
+                                                     {
+                                                         "id": request_id,
+                                                         "prompt": prompt
+                                                     })
+            logger.info(f"Send request {request_id} to consumer with topic: {topic}")
+        except Exception as ex:
+            logger.exception(ex)
+            return {
+                       "message": "Internal Server Error",
+                       "data": request_id
+                   }, status.HTTP_500_INTERNAL_SERVER_ERROR
+
+        try:
+            query = db.insert(ImageDiffusionServer.pg_query_meta_table).values(query_id=request_id,
+                                                                               prompt=prompt,
+                                                                               translated_prompt=None,
+                                                                               language=lang,
+                                                                               is_generated=False)
+            _ = ImageDiffusionServer.pg_connection.execute(query)
+            logger.info(f"Write transaction {request_id} to table {ImageDiffusionServer.conf.postgres.query_meta_table}")
+        except Exception as ex:
+            logger.exception(ex)
+            return {
+                       "message": "Internal Server Error",
+                       "data": request_id
+                   }, status.HTTP_500_INTERNAL_SERVER_ERROR
+
+        return {
+                   "message": "We are processing your request",
+                   "data": request_id
+               }, status.HTTP_102_PROCESSING
+
+    @staticmethod
+    @server.post("/image_to_image/", status_code=status.HTTP_201_CREATED)
+    async def image_to_image(prompt: str = Form(...), lang: str = Form(...), image = File(...)):
+        prompt = prompt.strip()
+        if prompt == "":
+            return {
+                       "message": "Unaccepted prompt",
+                       "data": 0
+                   }, status.HTTP_406_NOT_ACCEPTABLE
+
+        request_id = uuid.uuid4().int
+        logger.info(f"Received request {request_id}")
+        
+        # send to consumer worker
+        if lang == "en":
+            topic = ImageDiffusionServer.conf.kafka.image_generation_topic
+        else:
+            topic = ImageDiffusionServer.conf.kafka.text_translation_topic
+
+        try:
+            image = image.file.read()
+            ImageDiffusionServer.rd_connection.set(request_id, image)
+
             ImageDiffusionServer.kafka_producer.send(topic,
                                                      {
                                                          "id": request_id,

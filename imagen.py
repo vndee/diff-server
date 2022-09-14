@@ -1,11 +1,13 @@
 import os
+import gc
+import io
 import json
+import redis
 import torch
 import argparse
-import sqlalchemy as db
 from PIL import Image
+import sqlalchemy as db
 from loguru import logger
-# from torch import autocast
 from omegaconf import OmegaConf
 from diffusers import StableDiffusionPipeline
 from kafka import KafkaConsumer
@@ -26,6 +28,8 @@ class ImageGenerationConsumerWorker(object):
                                             group_id=self.conf.kafka.group_id,
                                             auto_offset_reset="earliest")
 
+        self.rd_connection = redis.Redis(host=self.conf.redis.host, port=self.conf.redis.port, db=self.conf.redis.database)
+
         connection_string = f"postgresql://{self.conf.postgres.user}:" \
                             f"{self.conf.postgres.password}@" \
                             f"{self.conf.postgres.host}/{self.conf.postgres.database}"
@@ -40,11 +44,22 @@ class ImageGenerationConsumerWorker(object):
         logger.info(f"ImageGenerationConsumerWorker is live now!!!")
 
     def synthesize(self, id, prompt):
-        logger.info(f"Synthesizing for {id}")
         with torch.no_grad():
             # TODO: edit in production
             f_name = os.path.join(self.conf.file_server.folder, f"{id}.jpg")
-            image = self.pipe(prompt, guidance_scale=7.5)["sample"][0]
+            
+            if self.rd_connection.exists(id) is True:
+                logger.info(f"Image-to-image synthesizing for {id}")
+                _data = self.rd_connection.get(id)
+                prior_image = Image.open(io.BytesIO(_data)).convert("RGB")          
+                prior_image = prior_image.resize((768, 512))
+
+                _generator = torch.Generator(device=self.conf.imagen.device).manual_seed(1024)
+                image = self.pipe(prompt=prompt, init_image=prior_image, strength=0.75, guidance_scale=7.5, generator=_generator).images[0]
+            else:
+                logger.info(f"Text-to-image synthesizing for {id}")
+                image = self.pipe(prompt=prompt, guidance_scale=7.5)["sample"][0]
+
             # image = Image.open("static/images/10342726256722825098371792010908027558.jpg")
             image.save(f_name)
 
@@ -53,6 +68,8 @@ class ImageGenerationConsumerWorker(object):
             _ = self.pg_connection.execute(query)
 
             logger.info(f"Output saved at {f_name}")
+
+        gc.collect()
 
     def execute(self):
         logger.info(f"Listening on topic: {self.topic}")
@@ -65,7 +82,12 @@ class ImageGenerationConsumerWorker(object):
                 prompt = msg["prompt"]
 
             logger.info(f"{request_id} {prompt}")
-            self.synthesize(request_id, prompt)
+            
+            # TODO: try .. catch
+            try:
+                self.synthesize(request_id, prompt)
+            except Exception as ex:
+                logger.exception(ex)
 
 
 if __name__ == "__main__":
