@@ -126,7 +126,7 @@ class ImageDiffusionServer(object):
 
     @staticmethod
     @server.post("/image_to_image/", status_code=status.HTTP_201_CREATED)
-    async def image_to_image(prompt: str = Form(...), lang: str = Form(...), image = File(...)):
+    async def image_to_image(user_id: str = Form(...), prompt: str = Form(...), lang: str = Form(...), image = File(...)):
         prompt = prompt.strip()
         if prompt == "":
             return {
@@ -168,7 +168,7 @@ class ImageDiffusionServer(object):
                                                                                translated_prompt=None,
                                                                                language=lang,
                                                                                is_generated=False,
-                                                                               createa_at=datetime.datetime.now())
+                                                                               created_at=datetime.datetime.now())
             _ = ImageDiffusionServer.pg_connection.execute(query)
             logger.info(f"Write transaction {request_id} to table {ImageDiffusionServer.conf.postgres.query_meta_table}")
         except Exception as ex:

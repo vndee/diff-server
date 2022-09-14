@@ -85,8 +85,6 @@ class ImageGenerationConsumerWorker(object):
             else:
                 prompt = msg["prompt"]
 
-            logger.info(f"{request_id} {prompt}")
-            
             # TODO: try .. catch
             try:
                 self.synthesize(request_id, prompt)
