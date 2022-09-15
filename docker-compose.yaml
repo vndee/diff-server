@@ -108,7 +108,7 @@ services:
     command: ["python3", "translator.py"]
     deploy:
       mode: replicated
-      replicas: 2
+      replicas: 1
       resources:
         reservations:
           devices:
@@ -130,7 +130,7 @@ services:
     command: ["python3", "imagen.py"]
     deploy:
       mode: replicated
-      replicas: 3
+      replicas: 2
       resources:
         reservations:
           devices:
