@@ -183,6 +183,55 @@ class ImageDiffusionServer(object):
                    "data": request_id
                }, status.HTTP_102_PROCESSING
 
+    @staticmethod
+    @server.post("/image_upscaler/", status_code=status.HTTP_201_CREATED)
+    async def image_upscaler(user_id: str = Form(...), image = File(...)):
+        request_id = uuid.uuid4().int
+        logger.info(f"Received request {request_id}")
+        
+        # send to consumer worker
+        topic = ImageDiffusionServer.conf.kafka.image_super_resolution_topic
+
+        try:
+            image = image.file.read()
+            ImageDiffusionServer.rd_connection.set(request_id, image)
+
+            ImageDiffusionServer.kafka_producer.send(topic,
+                                                     {
+                                                         "id": request_id,
+                                                     })
+            logger.info(f"Send request {request_id} to consumer with topic: {topic}")
+        except Exception as ex:
+            logger.exception(ex)
+            return {
+                       "message": "Internal Server Error",
+                       "data": request_id
+                   }, status.HTTP_500_INTERNAL_SERVER_ERROR
+
+        try:
+            query = db.insert(ImageDiffusionServer.pg_query_meta_table).values(user_id=user_id,
+                                                                               is_init_image=True,
+                                                                               query_id=request_id,
+                                                                               prompt="-1",
+                                                                               translated_prompt=None,
+                                                                               language="-1",
+                                                                               is_generated=False,
+                                                                               created_at=datetime.datetime.now())
+            _ = ImageDiffusionServer.pg_connection.execute(query)
+            logger.info(f"Write transaction {request_id} to table {ImageDiffusionServer.conf.postgres.query_meta_table}")
+        except Exception as ex:
+            logger.exception(ex)
+            return {
+                       "message": "Internal Server Error",
+                       "data": request_id
+                   }, status.HTTP_500_INTERNAL_SERVER_ERROR
+
+        return {
+                   "message": "We are processing your request",
+                   "data": request_id
+               }, status.HTTP_102_PROCESSING
+
+
     def execute(self):
         uvicorn.run(app=ImageDiffusionServer.server, host=self.conf.server.host, port=self.conf.server.port)
 

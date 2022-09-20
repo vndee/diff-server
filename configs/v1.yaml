@@ -4,6 +4,7 @@ kafka:
   image_generation_topic: IMAGE_GENERATION_TOPIC
   text_translation_topic: TEXT_TRANSLATION_TOPIC
   im2im_generation_topic: IMAGE_TO_IMAGE_GENERATION_TOPIC
+  image_super_resolution_topic: IMAGE_SUPER_RESOLUTION_TOPIC
 
 postgres:
   host: postgres:5432
@@ -28,6 +29,18 @@ imagen:
 translator:
   device: cuda:0
   checkpoint: checkpoints/translator
+
+upscaler:
+  device: cuda:0
+  model_name: RealESRGAN_x4plus
+  checkpoint: ./checkpoints/realesrgan
+  tile: 0
+  tile_pad: 10
+  pre_pad: 0
+  fp32: true
+  gpu_id: 0
+  face_enhancer_checkpoint: ./checkpoints/gfpgan/GFPGANv1.3.pth
+  outscale: 4
 
 file_server:
   folder: ./static/images

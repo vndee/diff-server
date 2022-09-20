@@ -19,6 +19,7 @@ services:
       stream-network:
         aliases:
           - kafka
+
   webserver:
     image: nginx:latest
     ports:
@@ -31,7 +32,7 @@ services:
       stream-network:
         aliases:
           - nginx
-    restart: on-failure
+    restart: always
 
   postgres:
     image: postgres
@@ -140,6 +141,29 @@ services:
     networks:
       - stream-network
     restart: on-failure
+
+  upscaler_worker:
+    build:
+      context: .
+      dockerfile: ./docker/upscaler.Dockerfile
+    depends_on:
+      - kafka
+    volumes:
+      - ${PWD}:/app/
+    command: ["python3", "upscaler.py"]
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["0"]
+              capabilities: [gpu]
+    networks:
+      - stream-network
+    restart: on-failure
+
 
 networks:
   stream-network:

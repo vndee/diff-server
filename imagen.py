@@ -49,7 +49,7 @@ class ImageGenerationConsumerWorker(object):
             # TODO: edit in production
             f_name = os.path.join(self.conf.file_server.folder, f"{id}.jpg")
             
-            if self.rd_connection.exists(id) is True:
+            if self.rd_connection.exists(id):
                 logger.info(f"Image-to-image synthesizing for {id}")
                 _data = self.rd_connection.get(id)
                 prior_image = Image.open(io.BytesIO(_data)).convert("RGB")          
