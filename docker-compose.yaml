@@ -131,7 +131,7 @@ services:
     command: ["python3", "imagen.py"]
     deploy:
       mode: replicated
-      replicas: 2
+      replicas: 1
       resources:
         reservations:
           devices:
@@ -158,7 +158,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              device_ids: ["0"]
+              device_ids: ["1"]
               capabilities: [gpu]
     networks:
       - stream-network

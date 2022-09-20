@@ -16,6 +16,7 @@ ENV TZ=Asia/Ho_Chi_Minh
 RUN apt-get install -y build-essential software-properties-common gcc g++ musl-dev libpq-dev
 
 RUN pip install --no-cache-dir --upgrade -r /requirements.txt
+RUN pip install Pillow
 
 ENV PYTHONPATH=/app
 WORKDIR /app

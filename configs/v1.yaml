@@ -39,7 +39,7 @@ upscaler:
   pre_pad: 0
   fp32: true
   gpu_id: 0
-  face_enhancer_checkpoint: ./checkpoints/gfpgan/GFPGANv1.3.pth
+  face_enhancer_checkpoint: ./checkpoints/gfpgan/GFPGANv1.4.pth
   outscale: 4
 
 file_server:

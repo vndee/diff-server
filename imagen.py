@@ -56,12 +56,11 @@ class ImageGenerationConsumerWorker(object):
                 prior_image = prior_image.resize((768, 512))
 
                 _generator = torch.Generator(device=self.conf.imagen.device).manual_seed(1024)
-                image = self.pipe(prompt=prompt, init_image=prior_image, strength=0.75, guidance_scale=7.5, generator=_generator).images[0]
+                image = self.pipe(prompt=prompt, init_image=prior_image, strength=0.3, guidance_scale=7.5, generator=_generator).images[0]
             else:
                 logger.info(f"Text-to-image synthesizing for {id}")
                 image = self.pipe(prompt=prompt, guidance_scale=7.5)["sample"][0]
 
-            # image = Image.open("static/images/10342726256722825098371792010908027558.jpg")
             image.save(f_name)
 
             query = db.update(self.pg_query_meta_table).values(
